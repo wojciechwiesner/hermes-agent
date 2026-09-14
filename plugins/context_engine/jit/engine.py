@@ -157,6 +157,37 @@ class JitContextEngine(ContextEngine):
                 total += len(str(m["tool_calls"])) // 4 + 4
         return max(total, 1)
 
+    def select_tools(
+        self,
+        tools: List[Dict[str, Any]],
+        *,
+        request_messages: Optional[List[Dict[str, Any]]] = None,
+        incoming_message: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> List[Dict[str, Any]]:
+        """Select and hydrate only the active tool schemas (JIT Tool Surface)."""
+        if not tools:
+            return []
+        if not hasattr(self, "_tool_resolver"):
+            from .tool_resolver import JitToolResolver
+            self._tool_resolver = JitToolResolver(self.session_id or "default")
+
+        user_text = ""
+        if incoming_message and isinstance(incoming_message, dict):
+            user_text = incoming_message.get("content", "")
+        elif request_messages:
+            for m in reversed(request_messages):
+                if m.get("role") == "user" and isinstance(m.get("content"), str):
+                    user_text = m["content"]
+                    break
+
+        hydrated, _ = self._tool_resolver.resolve_active_tools(
+            tools,
+            user_message=user_text,
+            active_scope=getattr(self, "session_scope", "general"),
+        )
+        return hydrated
+
     def select_context(
         self,
         request_messages: List[Dict[str, Any]],

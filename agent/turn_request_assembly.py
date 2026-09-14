@@ -215,6 +215,18 @@ def assemble_api_request(
         api_messages = _initial_cache_plan.messages
         tools_for_api = _initial_cache_plan.tools
 
+    # JIT Tool Surface: lazily hydrate active tool schemas if engine supports select_tools
+    _engine = getattr(agent, "context_compressor", None)
+    if _engine is not None and hasattr(_engine, "select_tools"):
+        try:
+            tools_for_api = _engine.select_tools(
+                tools_for_api or getattr(agent, "tools", []) or [],
+                request_messages=api_messages,
+                incoming_message=_sel_incoming,
+            )
+        except Exception:
+            pass
+
     # Prepare the persistent-MoA request before measuring compression pressure: the
     # ephemeral advisor output is absent from ``messages``; ``create()`` reuses the
     # prepared request instead of running the advisors again.
