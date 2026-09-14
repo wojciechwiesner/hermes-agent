@@ -1,0 +1,40 @@
+{
+  "benchmark": "JIT Tool Surface & Lazy Schema Hydration",
+  "hardware": "Apple Silicon M2 Pro (Metal)",
+  "model": "qwen3.8:9b",
+  "quantization": "Q4_K_M",
+  "timestamp": "2026-09-14T21:15:00Z",
+  "runs": [
+    {
+      "mode": "eager_tier1",
+      "label": "Hermes Default Tier 1 (25 tools)",
+      "active_tools_count": 25,
+      "prompt_tokens": 10142,
+      "prefill_time_seconds": 44.96,
+      "wall_time_seconds": 63.10,
+      "prefill_tok_per_sec": 225.6,
+      "16k_window_consumed_pct": 61.9
+    },
+    {
+      "mode": "jit_tool_surface",
+      "label": "JIT Lazy Hydration (5 core.code tools)",
+      "active_tools_count": 5,
+      "prompt_tokens": 2220,
+      "prefill_time_seconds": 9.26,
+      "wall_time_seconds": 13.54,
+      "prefill_tok_per_sec": 239.7,
+      "16k_window_consumed_pct": 13.5,
+      "speedup_factor": 4.85,
+      "token_reduction_pct": 78.1
+    }
+  ],
+  "request_budget_gate": {
+    "16k_window": 16384,
+    "reserved_output": 2048,
+    "safety_margin": 512,
+    "safe_budget_ceiling": 13824,
+    "jit_total_request": 2220,
+    "jit_headroom_remaining": 11604,
+    "status": "PERMITTED"
+  }
+}

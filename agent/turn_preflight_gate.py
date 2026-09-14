@@ -43,7 +43,8 @@ def run_preflight_gate(
         _last_preflight_pressure=None,
     )
 
-    _runtime_context_error = _ollama_context_limit_error(agent, request_pressure_tokens)
+    _tools_candidate = getattr(agent, "_last_tools_for_api", None)
+    _runtime_context_error = _ollama_context_limit_error(agent, request_pressure_tokens, tools_for_api=_tools_candidate)
     if _runtime_context_error:
         v.final_response = _runtime_context_error
         v.failed = True

@@ -226,6 +226,7 @@ def assemble_api_request(
             )
         except Exception:
             pass
+    agent._last_tools_for_api = tools_for_api
 
     # Prepare the persistent-MoA request before measuring compression pressure: the
     # ephemeral advisor output is absent from ``messages``; ``create()`` reuses the

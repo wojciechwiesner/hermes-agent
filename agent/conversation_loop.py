@@ -378,7 +378,7 @@ def _pressure_with_real_floor(compressor: Any, rough_tokens: int) -> int:
     return rough_tokens
 
 
-def _ollama_context_limit_error(agent: Any, request_tokens: int) -> Optional[str]:
+def _ollama_context_limit_error(agent: Any, request_tokens: int, tools_for_api: Optional[list] = None) -> Optional[str]:
     """Return a user-facing error when Ollama is loaded with too little context."""
     runtime_ctx = getattr(agent, "_ollama_num_ctx", None)
     if (
@@ -387,6 +387,28 @@ def _ollama_context_limit_error(agent: Any, request_tokens: int) -> Optional[str
         or not 0 < runtime_ctx < MINIMUM_CONTEXT_LENGTH
     ):
         return None
+
+    # Authoritative RequestBudgetGate evaluation:
+    _engine = getattr(agent, "context_compressor", None)
+    if _engine is not None and hasattr(_engine, "validate_request_budget"):
+        try:
+            actual_tools = tools_for_api if tools_for_api is not None else getattr(agent, "_last_tools_for_api", None)
+            is_permitted, metrics = _engine.validate_request_budget(
+                messages=getattr(agent, "messages", []),
+                tools=actual_tools or getattr(agent, "tools", []),
+                runtime_context_window=runtime_ctx,
+            )
+            if is_permitted:
+                logger.info(
+                    "RequestBudgetGate: Sub-64k request permitted (%d tokens <= %d safe budget in %d window, headroom: %d)",
+                    metrics.get("total_request_tokens", request_tokens),
+                    metrics.get("safe_budget_ceiling", runtime_ctx),
+                    runtime_ctx,
+                    metrics.get("remaining_headroom", 0),
+                )
+                return None  # Formally permitted: complete request verified to fit!
+        except Exception as err:
+            logger.debug("RequestBudgetGate evaluation fallback: %s", err)
 
     model = getattr(agent, "model", "") or "the selected model"
     logger.warning(

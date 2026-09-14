@@ -12,18 +12,25 @@ from typing import Any, Dict, List, Optional
 class RequestBudgetGate:
     """Mathematical gate ensuring full request fit before dispatch."""
 
-    def __init__(self, reserved_output: int = 2048, safety_margin: int = 512) -> None:
+    def __init__(self, reserved_output: int = 2048, safety_margin: int = 512, safety_multiplier: float = 1.15) -> None:
         self.reserved_output = reserved_output
         self.safety_margin = safety_margin
+        self.safety_multiplier = safety_multiplier
 
     def estimate_tokens(self, text_or_obj: Any) -> int:
+        """Conservative token estimator with safety factor to prevent undercounting."""
+        raw_chars = 0
         if isinstance(text_or_obj, str):
-            return max(len(text_or_obj) // 4, 1)
-        try:
-            dumped = json.dumps(text_or_obj)
-            return max(len(dumped) // 4, 1)
-        except Exception:
-            return 500
+            raw_chars = len(text_or_obj)
+        else:
+            try:
+                dumped = json.dumps(text_or_obj)
+                raw_chars = len(dumped)
+            except Exception:
+                return 500
+        # 3.5 chars/token heuristic + safety multiplier provides a conservative ceiling
+        base_estimate = max(int(raw_chars / 3.5), 1)
+        return int(base_estimate * self.safety_multiplier) + 4
 
     def validate_request(
         self,

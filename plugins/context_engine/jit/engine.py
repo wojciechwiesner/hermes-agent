@@ -188,6 +188,23 @@ class JitContextEngine(ContextEngine):
         )
         return hydrated
 
+    def validate_request_budget(
+        self,
+        *,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        runtime_context_window: int,
+    ) -> tuple[bool, Dict[str, Any]]:
+        """Formally validate that the complete assembled request fits inside runtime window."""
+        if not hasattr(self, "_budget_gate"):
+            from .budget_gate import RequestBudgetGate
+            self._budget_gate = RequestBudgetGate(reserved_output=2048, safety_margin=512)
+        return self._budget_gate.validate_request(
+            messages=messages,
+            tools=tools,
+            runtime_context_window=runtime_context_window,
+        )
+
     def select_context(
         self,
         request_messages: List[Dict[str, Any]],
